@@ -1,0 +1,75 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+# 1. SETUP PARAMETERS (The "Physics" constants)
+SIGMA = 10.0
+RHO = 28.0
+BETA = 8.0 / 3.0
+
+def lorenz(state, s=SIGMA, r=RHO, b=BETA):
+    """
+    Computes the derivatives for the Lorenz system.
+    state: a list/array of [x, y, z]
+    """
+    x, y, z = state
+    dx = s * (y - x)
+    dy = x * (r - z) - y
+    dz = x * y - b * z
+    return np.array([dx, dy, dz])
+
+def rk4_step(state, dt):
+    """
+    The "Math" engine: Fourth-Order Runge-Kutta.
+    Calculates the next state with high precision.
+    """
+    k1 = lorenz(state)
+    k2 = lorenz(state + (dt * k1 / 2))
+    k3 = lorenz(state + (dt * k2 / 2))
+    k4 = lorenz(state + (dt * k3))
+    
+    return state + (dt / 6) * (k1 + 2*k2 + 2*k3 + k4)
+
+# 2. SIMULATION SETTINGS
+dt = 0.01          # Time step (h)
+steps = 10000      # Total iterations
+time = np.linspace(0, steps*dt, steps)
+
+# 3. RUN PRIMARY SIMULATION (Initial Condition: 1, 1, 1)
+state = np.array([1.0, 1.0, 1.0])
+path1 = np.empty((steps, 3))
+
+for i in range(steps):
+    path1[i] = state
+    state = rk4_step(state, dt)
+
+# 4. RUN SENSITIVITY SIMULATION (Initial Condition: 1.0001, 1, 1)
+# This proves the "Butterfly Effect"
+state_alt = np.array([1.0001, 1.0, 1.0])
+path2 = np.empty((steps, 3))
+
+for i in range(steps):
+    path2[i] = state_alt
+    state_alt = rk4_step(state_alt, dt)
+
+# 5. VISUALIZATION
+fig = plt.figure(figsize=(15, 6))
+
+# Subplot 1: The 3D Lorenz Attractor
+ax1 = fig.add_subplot(1, 2, 1, projection='3d')
+ax1.plot(path1[:, 0], path1[:, 1], path1[:, 2], lw=0.5, color='royalblue')
+ax1.set_title("3D Lorenz Strange Attractor")
+ax1.set_xlabel("X (Flow Speed)")
+ax1.set_ylabel("Y (Temp Gradient)")
+ax1.set_zlabel("Z (Vertical Distortion)")
+
+# Subplot 2: Sensitivity (The Butterfly Effect)
+ax2 = fig.add_subplot(1, 2, 2)
+ax2.plot(time[:2500], path1[:2500, 0], label="Path 1: [1, 1, 1]", alpha=0.8)
+ax2.plot(time[:2500], path2[:2500, 0], label="Path 2: [1.0001, 1, 1]", linestyle='--', color='red')
+ax2.set_title("X(t) Evolution: Sensitivity to Initial Conditions")
+ax2.set_xlabel("Time")
+ax2.set_ylabel("X Position")
+ax2.legend()
+
+plt.tight_layout()
+plt.show()
